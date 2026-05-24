@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMealPlanStore } from '../../store/useMealPlanStore';
 import { useRecipeStore } from '../../store/useRecipeStore';
 import { theme } from '../../utils/theme';
@@ -8,27 +8,36 @@ import { MealType } from '../../types';
 
 export const AddMealScreen = () => {
   const navigation = useNavigation<any>();
-  const { addPlannedMeal } = useMealPlanStore();
+  const route = useRoute<any>();
+  const editingId: string | undefined = route.params?.id;
+  const { plannedMeals, addPlannedMeal, updatePlannedMeal } = useMealPlanStore();
   const { recipes } = useRecipeStore();
+  const existing = editingId ? plannedMeals.find(m => m.id === editingId) : undefined;
 
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [selectedMealType, setSelectedMealType] = useState<MealType>('Pranzo');
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<string>(existing?.date ?? new Date().toISOString().split('T')[0]);
+  const [selectedMealType, setSelectedMealType] = useState<MealType>(existing?.mealType ?? 'Pranzo');
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string>(existing?.recipeId ?? '');
 
   const mealTypes: MealType[] = ['Colazione', 'Spuntino', 'Pranzo', 'Cena'];
 
-  // Helper to get next 7 days for selection
   const getNext7Days = () => {
-    const days = [];
+    const days: string[] = [];
     const today = new Date();
     for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
       days.push(d.toISOString().split('T')[0]);
     }
+    if (existing && !days.includes(existing.date)) {
+      days.unshift(existing.date);
+    }
     return days;
   };
   const dates = getNext7Days();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: editingId ? 'Modifica Pasto' : 'Pianifica Pasto' });
+  }, [navigation, editingId]);
 
   const handleSave = () => {
     if (!selectedRecipeId) {
@@ -36,26 +45,32 @@ export const AddMealScreen = () => {
       return;
     }
 
-    addPlannedMeal({
+    const payload = {
       date: selectedDate,
       mealType: selectedMealType,
-      recipeId: selectedRecipeId
-    });
+      recipeId: selectedRecipeId,
+    };
+
+    if (editingId) {
+      updatePlannedMeal(editingId, payload);
+    } else {
+      addPlannedMeal(payload);
+    }
 
     navigation.goBack();
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      
+
       <Text style={theme.typography.h2}>Quando?</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
         {dates.map(date => {
           const d = new Date(date);
           const isSelected = date === selectedDate;
           return (
-            <TouchableOpacity 
-              key={date} 
+            <TouchableOpacity
+              key={date}
               style={[styles.dateChip, isSelected && styles.dateChipSelected]}
               onPress={() => setSelectedDate(date)}
             >
@@ -70,7 +85,7 @@ export const AddMealScreen = () => {
       <Text style={[theme.typography.h2, { marginTop: theme.spacing.m }]}>Tipo di Pasto</Text>
       <View style={styles.mealTypeContainer}>
         {mealTypes.map(type => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={type}
             style={[styles.typeChip, selectedMealType === type && styles.typeChipSelected]}
             onPress={() => setSelectedMealType(type)}
@@ -83,7 +98,7 @@ export const AddMealScreen = () => {
       <Text style={[theme.typography.h2, { marginTop: theme.spacing.m, marginBottom: theme.spacing.s }]}>Cosa mangi?</Text>
       {recipes.length > 0 ? (
         recipes.map(recipe => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={recipe.id}
             style={[styles.recipeCard, selectedRecipeId === recipe.id && styles.recipeCardSelected]}
             onPress={() => setSelectedRecipeId(recipe.id)}
@@ -99,9 +114,9 @@ export const AddMealScreen = () => {
       )}
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Pianifica Pasto</Text>
+        <Text style={styles.saveButtonText}>{editingId ? 'Aggiorna Pasto' : 'Pianifica Pasto'}</Text>
       </TouchableOpacity>
-      
+
     </ScrollView>
   );
 };

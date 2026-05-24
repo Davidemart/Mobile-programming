@@ -25,7 +25,7 @@ export const RecipeListScreen = () => {
   const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           recipe.category.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (suggestCookable) {
       return matchesSearch && isCookable(recipe);
     }
@@ -80,7 +80,7 @@ export const RecipeListScreen = () => {
         )}
       </View>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.suggestButton, suggestCookable && styles.suggestButtonActive]}
         onPress={() => setSuggestCookable(!suggestCookable)}
       >

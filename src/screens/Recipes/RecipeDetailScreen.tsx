@@ -53,11 +53,9 @@ export const RecipeDetailScreen = () => {
         <View style={styles.titleRow}>
           <Text style={styles.title}>{recipe.name}</Text>
           <View style={styles.actions}>
-            {/*
             <TouchableOpacity onPress={() => navigation.navigate('AddEditRecipe', { id: recipe.id })} style={styles.iconButton}>
               <Ionicons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
-            */}
             <TouchableOpacity onPress={handleDelete} style={styles.iconButton}>
               <Ionicons name="trash" size={24} color={theme.colors.error} />
             </TouchableOpacity>

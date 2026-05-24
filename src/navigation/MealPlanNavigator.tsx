@@ -9,6 +9,7 @@ const Stack = createNativeStackNavigator();
 export const MealPlanNavigator = () => {
   return (
     <Stack.Navigator
+      id={undefined}
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.primary },
         headerTintColor: theme.colors.surface,

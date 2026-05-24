@@ -29,7 +29,7 @@ export const MealPlanScreen = () => {
     const recipe = recipes.find(r => r.id === recipeId);
     return (
       <View key={mealId} style={styles.mealCard}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.mealInfo}
           onPress={() => {
             if (recipe) {
@@ -40,7 +40,10 @@ export const MealPlanScreen = () => {
           <Text style={styles.mealType}>{mealType}</Text>
           <Text style={styles.mealRecipe}>{recipe?.name || 'Ricetta rimossa'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => deletePlannedMeal(mealId)}>
+        <TouchableOpacity onPress={() => navigation.navigate('AddMeal', { id: mealId })} style={styles.iconBtn} hitSlop={8}>
+          <Ionicons name="pencil" size={20} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => deletePlannedMeal(mealId)} style={styles.iconBtn} hitSlop={8}>
           <Ionicons name="close-circle" size={24} color={theme.colors.error} />
         </TouchableOpacity>
       </View>
@@ -144,6 +147,10 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     fontWeight: '600',
     marginTop: 2,
+  },
+  iconBtn: {
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.xs,
   },
   fab: {
     position: 'absolute',

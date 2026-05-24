@@ -10,44 +10,57 @@ export const PantryListScreen = () => {
   const { pantryItems, deletePantryItem } = usePantryStore();
   const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [onlyExpiring, setOnlyExpiring] = useState(false);
 
-  const filteredItems = pantryItems.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const getExpirationWarning = (dateStr?: string) => {
+  const getExpirationInfo = (dateStr?: string) => {
     if (!dateStr) return null;
     const expDate = new Date(dateStr);
     const today = new Date();
     const diffTime = expDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return { text: 'Scaduto', color: theme.colors.error };
-    if (diffDays <= 7) return { text: `Scade tra ${diffDays} gg`, color: theme.colors.warning };
-    return { text: `Scade: ${dateStr}`, color: theme.colors.textSecondary };
+
+    if (diffDays < 0) return { text: 'Scaduto', color: theme.colors.error, isAlert: true, days: diffDays };
+    if (diffDays <= 7) return { text: `Scade tra ${diffDays} gg`, color: theme.colors.warning, isAlert: true, days: diffDays };
+    return { text: `Scade: ${dateStr}`, color: theme.colors.textSecondary, isAlert: false, days: diffDays };
   };
 
+  const filteredItems = pantryItems.filter(item => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (onlyExpiring) {
+      const info = getExpirationInfo(item.expirationDate);
+      return info?.isAlert === true;
+    }
+    return true;
+  });
+
   const renderItem = ({ item }: { item: PantryItem }) => {
-    const warning = getExpirationWarning(item.expirationDate);
+    const warning = getExpirationInfo(item.expirationDate);
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('AddEditPantry', { id: item.id })}
+      >
         <View style={styles.cardHeader}>
           <Text style={styles.itemName}>{item.name}</Text>
-          <TouchableOpacity onPress={() => deletePantryItem(item.id)}>
+          <TouchableOpacity onPress={() => deletePantryItem(item.id)} hitSlop={8}>
             <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
           </TouchableOpacity>
         </View>
         <Text style={styles.itemCategory}>{item.category}</Text>
-        
+
         <View style={styles.cardFooter}>
           <Text style={styles.itemQuantity}>{item.quantity} {item.unit}</Text>
           {warning && (
             <Text style={[styles.itemExp, { color: warning.color }]}>{warning.text}</Text>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -63,14 +76,33 @@ export const PantryListScreen = () => {
         />
       </View>
 
+      <TouchableOpacity
+        style={[styles.filterToggle, onlyExpiring && styles.filterToggleActive]}
+        onPress={() => setOnlyExpiring(!onlyExpiring)}
+      >
+        <Ionicons
+          name="alert-circle"
+          size={18}
+          color={onlyExpiring ? theme.colors.surface : theme.colors.warning}
+        />
+        <Text style={[styles.filterText, onlyExpiring && styles.filterTextActive]}>
+          Solo prodotti in scadenza
+        </Text>
+      </TouchableOpacity>
+
       <FlatList
         data={filteredItems}
         keyExtractor={item => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {onlyExpiring ? 'Nessun prodotto in scadenza.' : 'Dispensa vuota.'}
+          </Text>
+        }
       />
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('AddEditPantry')}
       >
@@ -90,6 +122,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
     margin: theme.spacing.m,
+    marginBottom: theme.spacing.s,
     paddingHorizontal: theme.spacing.m,
     borderRadius: theme.borderRadius.l,
     height: 48,
@@ -102,6 +135,31 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: theme.colors.text,
+  },
+  filterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.m,
+    marginBottom: theme.spacing.s,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
+    borderRadius: theme.borderRadius.round,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+  },
+  filterToggleActive: {
+    backgroundColor: theme.colors.warning,
+  },
+  filterText: {
+    marginLeft: 6,
+    fontWeight: '600',
+    color: theme.colors.warning,
+    fontSize: 13,
+  },
+  filterTextActive: {
+    color: theme.colors.surface,
   },
   list: {
     padding: theme.spacing.m,
@@ -142,6 +200,11 @@ const styles = StyleSheet.create({
   itemExp: {
     ...theme.typography.bodySmall,
     fontWeight: 'bold',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xl,
   },
   fab: {
     position: 'absolute',

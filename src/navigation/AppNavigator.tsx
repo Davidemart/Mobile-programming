@@ -16,6 +16,7 @@ export const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Tab.Navigator
+        id={undefined}
         screenOptions={({ route }) => ({
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: keyof typeof Ionicons.glyphMap = 'help';

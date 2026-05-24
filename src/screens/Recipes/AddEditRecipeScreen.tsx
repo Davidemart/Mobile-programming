@@ -1,30 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useRecipeStore } from '../../store/useRecipeStore';
 import { theme } from '../../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient, RecipeCategory, Difficulty, Unit } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 
+const CATEGORIES: RecipeCategory[] = ['Colazione', 'Primo', 'Secondo', 'Contorno', 'Dolce', 'Spuntino', 'Bevanda'];
+const DIFFICULTIES: Difficulty[] = ['Facile', 'Media', 'Difficile'];
+const UNITS: Unit[] = ['g', 'kg', 'ml', 'l', 'pz', 'cucchiaio', 'cucchiaino', 'q.b.'];
+
 export const AddEditRecipeScreen = () => {
   const navigation = useNavigation<any>();
-  const { addRecipe } = useRecipeStore();
+  const route = useRoute<any>();
+  const editingId: string | undefined = route.params?.id;
+  const { recipes, addRecipe, updateRecipe } = useRecipeStore();
+  const existing = editingId ? recipes.find(r => r.id === editingId) : undefined;
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<RecipeCategory>('Primo');
-  const [prepTime, setPrepTime] = useState('');
-  const [difficulty, setDifficulty] = useState<Difficulty>('Facile');
-  const [portions, setPortions] = useState('');
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [notes, setNotes] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [name, setName] = useState(existing?.name ?? '');
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [category, setCategory] = useState<RecipeCategory>(existing?.category ?? 'Primo');
+  const [prepTime, setPrepTime] = useState(existing ? String(existing.prepTime) : '');
+  const [difficulty, setDifficulty] = useState<Difficulty>(existing?.difficulty ?? 'Facile');
+  const [portions, setPortions] = useState(existing ? String(existing.portions) : '');
+  const [ingredients, setIngredients] = useState<Ingredient[]>(existing?.ingredients ?? []);
+  const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [imageUrl, setImageUrl] = useState(existing?.imageUrl ?? '');
 
-  // Form for new ingredient
   const [ingName, setIngName] = useState('');
   const [ingQty, setIngQty] = useState('');
   const [ingUnit, setIngUnit] = useState<Unit>('g');
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: editingId ? 'Modifica Ricetta' : 'Nuova Ricetta' });
+  }, [navigation, editingId]);
 
   const handleAddIngredient = () => {
     if (!ingName || !ingQty) return;
@@ -49,7 +59,7 @@ export const AddEditRecipeScreen = () => {
       return;
     }
 
-    addRecipe({
+    const payload = {
       name,
       description,
       category,
@@ -58,8 +68,14 @@ export const AddEditRecipeScreen = () => {
       portions: parseInt(portions) || 1,
       ingredients,
       notes,
-      imageUrl: imageUrl || undefined
-    });
+      imageUrl: imageUrl || undefined,
+    };
+
+    if (editingId) {
+      updateRecipe(editingId, payload);
+    } else {
+      addRecipe(payload);
+    }
 
     navigation.goBack();
   };
@@ -71,6 +87,32 @@ export const AddEditRecipeScreen = () => {
 
       <Text style={styles.label}>Descrizione</Text>
       <TextInput style={[styles.input, styles.textArea]} value={description} onChangeText={setDescription} multiline placeholder="Breve descrizione..." />
+
+      <Text style={styles.label}>Categoria</Text>
+      <View style={styles.chipRow}>
+        {CATEGORIES.map(c => (
+          <TouchableOpacity
+            key={c}
+            style={[styles.chip, category === c && styles.chipSelected]}
+            onPress={() => setCategory(c)}
+          >
+            <Text style={[styles.chipText, category === c && styles.chipTextSelected]}>{c}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.label}>Difficoltà</Text>
+      <View style={styles.chipRow}>
+        {DIFFICULTIES.map(d => (
+          <TouchableOpacity
+            key={d}
+            style={[styles.chip, difficulty === d && styles.chipSelected]}
+            onPress={() => setDifficulty(d)}
+          >
+            <Text style={[styles.chipText, difficulty === d && styles.chipTextSelected]}>{d}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <View style={styles.row}>
         <View style={styles.halfCol}>
@@ -84,7 +126,7 @@ export const AddEditRecipeScreen = () => {
       </View>
 
       <Text style={styles.label}>URL Immagine</Text>
-      <TextInput style={styles.input} value={imageUrl} onChangeText={setImageUrl} placeholder="https://..." />
+      <TextInput style={styles.input} value={imageUrl} onChangeText={setImageUrl} placeholder="https://..." autoCapitalize="none" />
 
       <View style={styles.sectionDivider} />
 
@@ -105,6 +147,17 @@ export const AddEditRecipeScreen = () => {
           <Ionicons name="add" size={20} color={theme.colors.surface} />
         </TouchableOpacity>
       </View>
+      <View style={styles.chipRow}>
+        {UNITS.map(u => (
+          <TouchableOpacity
+            key={u}
+            style={[styles.chipSmall, ingUnit === u && styles.chipSelected]}
+            onPress={() => setIngUnit(u)}
+          >
+            <Text style={[styles.chipText, ingUnit === u && styles.chipTextSelected]}>{u}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <View style={styles.sectionDivider} />
 
@@ -112,7 +165,7 @@ export const AddEditRecipeScreen = () => {
       <TextInput style={[styles.input, styles.textArea]} value={notes} onChangeText={setNotes} multiline placeholder="Note aggiuntive..." />
 
       <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Salva Ricetta</Text>
+        <Text style={styles.saveButtonText}>{editingId ? 'Aggiorna Ricetta' : 'Salva Ricetta'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -157,6 +210,43 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: theme.colors.border,
     marginVertical: theme.spacing.l,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: theme.spacing.s,
+  },
+  chip: {
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
+    borderRadius: theme.borderRadius.round,
+    marginRight: theme.spacing.s,
+    marginBottom: theme.spacing.s,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  chipSmall: {
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.s,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.round,
+    marginRight: 6,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  chipSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  chipText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+  },
+  chipTextSelected: {
+    color: theme.colors.surface,
+    fontWeight: 'bold',
   },
   ingredientItem: {
     flexDirection: 'row',
